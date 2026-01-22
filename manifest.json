@@ -3,5 +3,5 @@
 	"site": "ranobes.com",
 	"content_type": "ranobe",
 	"version": "$last_git_tag",
-	"melon_required_version": "0.1.0"
+	"melon_required_version": null
 }
