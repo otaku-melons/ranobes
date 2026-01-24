@@ -301,6 +301,7 @@ class Parser(RanobeParser):
 			elif Response.status_code == 404: break
 			else: self._Portals.request_error(Response, "Unable request chapters page.")
 
+		BranchObject.reverse()
 		self._Title.add_branch(BranchObject)
 
 	#==========================================================================================#
