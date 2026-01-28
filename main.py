@@ -128,10 +128,19 @@ class Parser(RanobeParser):
 		if Response.status_code == 200:
 			Soup = BeautifulSoup(Response.text, "lxml")
 			Container = Soup.find("div", {"id": "arrticle"})
-
-			Scripts = Container.find_all("script")
-			for Script in Scripts: Script.decompose()
+			for Script in Container.find_all("script"): Script.decompose()
 			ParagraphsBlocks = Container.find_all("p", recursive = False)
+
+			# Некоторые страницы не содержат тегов абзацев.
+			if not ParagraphsBlocks and Container.find("br"):
+				PlainContent = Container.decode_contents()
+				ParagraphsBuffer = PlainContent.split("<br/>")
+				ParagraphsBlocks = list()
+
+				for Line in ParagraphsBuffer:
+					Line = Line.strip()
+					if not Line: continue
+					ParagraphsBlocks.append(BeautifulSoup(f"<p>{Line}</p>", "html.parser"))
 
 			for Index in range(len(ParagraphsBlocks)):
 				ImagesBlocks = ParagraphsBlocks[Index].find_all("img")
@@ -282,7 +291,7 @@ class Parser(RanobeParser):
 					ChapterHeader: str = Line.find("h6").get_text()
 					ChapterSlug = Link.split("/")[-1][:-5]
 					ChapterID = int(ChapterSlug.split("-")[0])
-					HeaderData = ChapterHeaderParser(ChapterHeader, self._Title.words_dictionary).parse()
+					HeaderData = ChapterHeaderParser(ChapterHeader, self._Title).parse()
 
 					Buffer = Chapter(self._SystemObjects, self._Title)
 					Buffer.set_id(ChapterID)
@@ -318,7 +327,7 @@ class Parser(RanobeParser):
 		:type chapter: Chapter
 		"""
 
-		for Paragraph in self.__GetParagraphs(chapter): chapter.add_paragraph(Paragraph)
+		chapter.set_paragraphs(self.__GetParagraphs(chapter))
 	
 	def collect(self, period: int | None = None, filters: str | None = None, pages: int | None = None) -> tuple[str]:
 		"""
