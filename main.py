@@ -8,11 +8,34 @@ from dublib.Polyglot import HTML
 from time import sleep
 import datetime
 
-from bs4 import BeautifulSoup, Tag
+from bs4 import BeautifulSoup, Comment, Tag
 import dateparser
 
 class Parser(RanobeParser):
 	"""Парсер."""
+
+	#==========================================================================================#
+	# >>>>> ПРИВАТНЫЕ МЕТОДЫ ОБРАБОТКИ HTML <<<<< #
+	#==========================================================================================#
+
+	def __WrapTextNodes(self, container: Tag) -> Tag:
+		"""
+		Оборачивает текстовые узлы в теги `<p>`.
+
+		:param container: Тег с контентом.
+		:type container: Tag
+		:return: Обработанный тег с контентом.
+		:rtype: BeautifulSoup
+		"""
+		
+		Lines = list()
+		
+		for Node in container.contents:
+			Line = str(Node).strip()
+			if Line in ("<br/>", ""): continue
+			if not Line.startswith("<p"): Lines.append(f"<p>{Line}</p>")
+		
+		return BeautifulSoup("".join(Lines), "html.parser")
 
 	#==========================================================================================#
 	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
@@ -128,19 +151,24 @@ class Parser(RanobeParser):
 		if Response.status_code == 200:
 			Soup = BeautifulSoup(Response.text, "lxml")
 			Container = Soup.find("div", {"id": "arrticle"})
-			for Script in Container.find_all("script"): Script.decompose()
-			ParagraphsBlocks = Container.find_all("p", recursive = False)
 
-			# Некоторые страницы не содержат тегов абзацев.
-			if not ParagraphsBlocks and Container.find("br"):
-				PlainContent = Container.decode_contents()
-				ParagraphsBuffer = PlainContent.split("<br/>")
-				ParagraphsBlocks = list()
+			for Script in Container.find_all("div"):
+				if Script.find("script"): Script.decompose()
 
-				for Line in ParagraphsBuffer:
-					Line = Line.strip()
-					if not Line: continue
-					ParagraphsBlocks.append(BeautifulSoup(f"<p>{Line}</p>", "html.parser"))
+			for CurrentComment in Soup.find_all(string = lambda Tag: isinstance(Tag, Comment)): CurrentComment.extract()
+			
+			if not Container.find("p", recursive = False) and Container.find("br", recursive = False): Container = self.__WrapTextNodes(Container)
+			ParagraphsBlocks = Container.find_all(("p", "div"), recursive = False)
+
+			for Block in ParagraphsBlocks:
+				Blockquote = Block.find("div", {"class": "quote"})
+
+				if Blockquote:
+					Blockquote.name = "blockquote"
+					NewContent = str(self.__WrapTextNodes(Blockquote))
+					Blockquote.clear()
+					Blockquote.append(BeautifulSoup(NewContent, "html.parser"))
+					Blockquote.attrs = dict()
 
 			for Index in range(len(ParagraphsBlocks)):
 				ImagesBlocks = ParagraphsBlocks[Index].find_all("img")
