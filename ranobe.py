@@ -1,4 +1,4 @@
-from Source.Core.Base.Formats.Ranobe.ChapterHeaderParser import ChapterHeaderParser
+from Source.Core.Base.Parsers.Components.ChapterHeaderParser.Ranobe import ChapterHeaderParser
 from Source.Core.Base.Formats.Ranobe.Legacy import LegacyChapter as Chapter
 from Source.Core.Base.Formats.BaseFormat import Cover, Statuses
 from Source.Core.Base.Parsers.RanobeParser import RanobeParser
